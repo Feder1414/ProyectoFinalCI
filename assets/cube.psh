@@ -1,0 +1,649 @@
+// Pixel shader  (HLSL)
+#include "BasicStructures.fxh"
+#include "Shadows.fxh"
+#include "SRGBUtilities.fxh"
+
+Texture2D g_Albedo;
+
+Texture2D g_HeightMap;
+
+Texture2D g_NormalMap;
+
+Texture2DArray<float> g_ShadowMap;
+
+
+SamplerState g_Albedo_sampler;
+
+SamplerState g_HeightMap_sampler;
+
+SamplerState g_NormalMap_sampler;
+
+SamplerComparisonState g_ShadowMap_sampler;
+
+
+// Constantes para el parallax occlusion mapping
+cbuffer cbPOM 
+{
+    float HeightScale; 
+    float _Pad0;
+    float _Pad1;
+    uint NumSteps; 
+};
+
+cbuffer parallaxConstants
+{
+    uint parallaxMode;
+    float _pPad;
+    float _pPd1;
+    float generalHeightScale;
+    
+};
+
+cbuffer cbLightAttribs
+{
+    LightAttribs g_LightAttribs;
+};
+
+struct PSInput
+{
+    float4 posH : SV_POSITION; // posicion en espacio clip
+    float3 posWorld : TEXCOORD0; // posicion en espacio mundial
+    float3 normalWorld : TEXCOORD1; // normal en espacio mundial
+    float3 fragmentLightPosDirLight: LIGHTSPACEPOS;
+    //float4 color : COLOR0;
+    float2 uv : TEXCOORD2;
+    float3 viewDirTS : TEXCOORD3;
+    float3 lightPosTS : TEXCOORD4;
+    float4 fragmentLightPos : TEXCOORD5;
+    float3 lightPos: TEXCOORD6;
+    float3 fragmentPosTS : TEXCOORD7;
+    float3 directionalLightDirTS : TEXCOORD8;
+    float3 tangentViewPos : TEXCOORD9; // posición de la camara en espacio tangente
+};
+
+
+
+float2 simpleParallaxMapping(float2 texCoords, float3 viewDirTS)
+{
+    float currentHeight = g_HeightMap.Sample(g_HeightMap_sampler, texCoords).r;
+    return generalHeightScale < 0.005 ? texCoords - viewDirTS.xy * (HeightScale) * currentHeight : texCoords - viewDirTS.xy * currentHeight * generalHeightScale;
+    
+}
+
+float2 StepParallaxMapping(float2 texCoords, float3 viewDirTS)
+{
+    // Número de capas: entre 8 y 32 según el ángulo
+    const float MinLayers = 8.0f;
+    const float MaxLayers = 32.0f;
+
+    
+    float numLayers = lerp(MaxLayers, MinLayers, abs(viewDirTS.z));
+    
+    // Profundidad de cada capa
+    float layerDepth = 1.0f / numLayers;
+    // Desplazamiento en UV por capa
+    
+    //float2 P = viewDirTS.xy / viewDirTS.z * HeightScale;
+    
+    float2 P;
+    
+    if (generalHeightScale < 0.05)
+    {
+        P = viewDirTS.xy / viewDirTS.z * HeightScale;
+    }
+    else
+    {
+        P = viewDirTS.xy / viewDirTS.z * generalHeightScale;
+    }
+    
+    //P = viewDirTS.xy / viewDirTS.z * HeightScale;
+        
+        
+    float2 deltaUV = P / numLayers;
+    
+    // Coordenadas y profundidad iniciales
+    float2 currUV = texCoords;
+    float currDepth = 0.0f;
+    float mapDepth = g_HeightMap.Sample(g_HeightMap_sampler, currUV).r;
+    
+    // Avanza capa a capa hasta que depth >= mapa
+    [loop]
+    while (currDepth < mapDepth)
+    {
+        currUV -= deltaUV;
+        currDepth += layerDepth;
+        mapDepth = g_HeightMap.Sample(g_HeightMap_sampler, currUV).r;
+    }
+    
+    return currUV;
+}
+
+
+//float2 ParallaxMap(float2 uv, float3 viewDirTS)
+//{
+//    float3 V = normalize(viewDirTS);
+//    float layerStep = 1.0f / NumSteps;
+//    float2 deltaUV = V.xy * (HeightScale / V.z) * layerStep;
+//    float2 uvCurr = uv;
+//    float depth = 0;
+//    float heightTex = 0;
+
+//    [loop]
+//    while (depth < 1.0f)
+//    {
+//        heightTex = g_HeightMap.Sample(g_HeightMap_sampler, uvCurr).r;
+//        if (depth >= heightTex)
+//            break;
+//        uvCurr -= deltaUV;
+//        depth += layerStep;
+//    }
+//    return uvCurr;
+    
+    //viewDirTS = normalize(viewDirTS);
+    //float layerStep = 1.0f / NumSteps;
+    
+    //float currentLayerDepth = 0.0f;
+    
+    //float2 P = viewDirTS.xy / viewDirTS.z * HeightScale;
+    
+    //float2 currentUV = uv;
+    //float currentDepthMapValue = g_HeightMap.Sample(g_HeightMap_sampler, currentUV).r;
+    
+    //float2 deltaUV = P / NumSteps;
+    
+    //int i = 0;
+    //while (currentLayerDepth < currentDepthMapValue)
+    //{
+    //    currentUV -= deltaUV;
+    //    currentDepthMapValue = g_HeightMap.Sample(g_HeightMap_sampler, currentUV).r;
+        
+    //    currentLayerDepth += layerStep;
+        
+    //    //if (i >= 60)
+    //    //{
+    //    //    break;
+    //    //}
+        
+    //    //i += 1;
+    //}
+    
+    //return currentUV;
+    
+//}
+
+
+//float2 ParallaxOclusionMap(float2 uv, float3 viewDirTS)
+//{
+//    float3 V = normalize(viewDirTS);
+//    float layerStep = 1.0f / NumSteps;
+//    float2 deltaUV = V.xy * (HeightScale / V.z) * layerStep;
+//    float2 uvCurr = uv;
+//    float depth = 0;
+//    float heightTex = 0;
+
+//    [loop]
+//    while (depth < 1.0f)
+//    {
+//        heightTex = g_HeightMap.Sample(g_HeightMap_sampler, uvCurr).r;
+//        if (depth >= heightTex)
+//            break;
+//        uvCurr -= deltaUV;
+//        depth += layerStep;
+//    }
+    
+//    float2 prevTexCoords = uvCurr + deltaUV;
+    
+//    float afterDepth = heightTex - depth;
+//    float beforeDepth = g_HeightMap.Sample(g_HeightMap_sampler, prevTexCoords).r - depth + layerStep;
+    
+//    float weight = afterDepth / (afterDepth + beforeDepth);
+//    float2 finalUV = prevTexCoords * weight + uv * (1.0 - weight);
+    
+    
+//    return finalUV;
+    
+//    //float layerStep = 1.0f / NumSteps;
+    
+//    //float currentLayerDepth = 0.0f;
+    
+//    //float2 P = viewDirTS.xy/viewDirTS.z * HeightScale;
+    
+//    //float2 currentUV = uv;
+//    //float currentDepthMapValue = g_HeightMap.Sample(g_HeightMap_sampler, currentUV).r;
+    
+//    //float deltaUV = P / NumSteps;
+    
+//    //while (currentLayerDepth < currentDepthMapValue)
+//    //{
+//    //    currentUV -= deltaUV;
+//    //    currentDepthMapValue = g_HeightMap.Sample(g_HeightMap_sampler, currentUV).r;
+        
+//    //    currentLayerDepth += layerStep;
+        
+//    //}
+    
+//    //return currentUV;
+
+//}
+
+//float2 ParallaxOcclusionMap(float2 uv, float3 viewDirTS)
+//{
+//    // PASO 0: capas dinámicas
+//    float3 V = normalize(viewDirTS);
+//    const uint MinLayers = 32;
+//    const uint MaxLayers = 64;
+//    uint steps = (uint) lerp((float) MaxLayers,
+//                                (float) MinLayers,
+//                                abs(V.z)); // |V·N|
+
+//    // protección y cálculo de auxiliares
+//    steps = clamp(steps, MinLayers, MaxLayers); // por si acaso
+//    float layer = 1.0 / steps;
+//    float vz = max(abs(V.z), 1e-4);
+//    //float2 P = V.xy / vz * HeightScale;
+    
+//    float2 P;
+    
+//    if (generalHeightScale < 0.005)
+//    {
+//        P = V.xy / vz * HeightScale;
+//    }
+//    else
+//    {
+//        P = V.xy / vz * generalHeightScale;
+//    }
+    
+    
+//    float2 dUV = P / steps;
+
+//    // BÚSQUEDA LINEAL + BINARIA (idéntico)
+//    float2 uvCurr = uv;
+//    float depth = 0.0;
+//    float hCurr = g_HeightMap.Sample(g_HeightMap_sampler, uvCurr).r;
+
+//    [loop]
+//    for (uint i = 0; i < steps; ++i)
+//    {
+//        if (depth >= hCurr)
+//            break;
+//        uvCurr -= dUV;
+//        hCurr = g_HeightMap.Sample(g_HeightMap_sampler, uvCurr).r;
+//        depth += layer;
+//    }
+
+//    float2 uvPrev = uvCurr + dUV;
+//    float hPrev = g_HeightMap.Sample(g_HeightMap_sampler, uvPrev).r;
+//    float depthPrev = depth - layer;
+
+//    [unroll]
+//    for (int j = 0; j < 4; ++j)
+//    {
+//        float2 uvMid = (uvCurr + uvPrev) * 0.5;
+//        float hMid = g_HeightMap.Sample(g_HeightMap_sampler, uvMid).r;
+//        float depthMid = (depth + depthPrev) * 0.5;
+
+//        bool inside = depthMid < hMid; // aún encima?
+//        uvPrev = inside ? uvPrev : uvCurr;
+//        hPrev = inside ? hPrev : hCurr;
+//        depthPrev = inside ? depthPrev : depth;
+
+//        uvCurr = inside ? uvCurr : uvMid;
+//        hCurr = inside ? hCurr : hMid;
+//        depth = inside ? depth : depthMid;
+//    }
+
+//    float w = (depth - hCurr) / ((depth - hCurr) + (hPrev - depthPrev));
+//    return lerp(uvCurr, uvPrev, saturate(w));
+//}
+
+
+
+//float ShadowCalculation(float4 fragPosLight, float3 geomNormalWS, float3 lightDirWS)
+//{
+//    // 1) Proyección a NDC [-1,1] y luego a UV [0,1]
+//    float3 proj = fragPosLight.xyz / fragPosLight.w;
+//    float2 uv = proj.xy * 0.5f + 0.5f;
+//    float depth = proj.z;
+
+//    // 2) Sesgo para evitar acne
+//    float bias = max(0.05 * (1.0 - dot(normalize(geomNormalWS),
+//                                        normalize(lightDirWS))), 0.005);
+
+//    // 3) PCF 3×3 manual (con SampleCmp hacemos comparación a la vez)
+//    float shadow = 0.0;
+//    uint w, h;
+//    g_ShadowMap.GetDimensions(w, h);
+//    float2 texel = 1.0 / float2(w, h);
+
+//    [unroll]
+//    for (int x = -1; x <= 1; ++x)
+//    {
+//        [unroll]
+//        for (int y = -1; y <= 1; ++y)
+//        {
+//            float2 offset = float2(x, y) * texel;
+//            shadow += g_ShadowMap.SampleCmp(g_ShadowMap_sampler,
+//                                            uv + offset,
+//                                            depth - bias);
+//        }
+//    }
+//    shadow /= 9.0;
+
+//    if (proj.z > 1.0)
+//        shadow = 1.0;
+
+//    return shadow; // 1 = iluminado, 0 = en sombra
+//}
+
+//float ShadowCalculation(float4 fragPosLight,
+//                        float3 geomNormalWS,
+//                        float3 lightDirWS)
+//{
+//    float3 proj = fragPosLight.xyz / fragPosLight.w;
+//    float2 uv = proj.xy * 0.5 + 0.5;
+//    float depth = proj.z;
+
+//    float bias = max(0.05 * (1.0 - dot(normalize(geomNormalWS),
+//                                     normalize(lightDirWS))), 0.005);
+
+//    uint w, h;
+//    g_ShadowMap.GetDimensions(w, h);
+//    float2 texel = 1.0 / float2(w, h);
+
+//    float shadow = 0.0;
+//    [unroll]
+//    for (int x = -1; x <= 1; ++x)
+//    [unroll]
+//        for (int y = -1; y <= 1; ++y)
+//        {
+//            float lit = g_ShadowMap.SampleCmp(
+//                         g_ShadowMap_sampler,
+//                         uv + float2(x, y) * texel,
+//                         depth - bias); // 1 = luz
+//            shadow += 1.0 - lit; // 1 = sombra
+//        }
+//    shadow /= 9.0;
+
+//    return (proj.z > 1.0) ? 0.0 : shadow; // fuera del frustum-luz sin sombra
+//}
+
+float2 ParallaxMapping(float2 texCoords, float3 viewDirTS)
+{
+    
+    // Cantidad min y max de capas
+    const float MinLayers = 64.0f;
+    const float MaxLayers = 132.0f;
+   
+    //// Ajuste de capas
+    float fLayers = lerp(MaxLayers, MinLayers, abs(viewDirTS.z));
+    
+    uint numLayers = (uint) fLayers + 1; // entero
+    
+    //float numLayers = lerp(MaxLayers, MinLayers, abs(viewDirTS.z));
+    
+    
+    // Profundidad de cada capa
+    float layerDepth = 1.0f / numLayers;
+    
+    // Vector de desplazamiento en UV por capa
+    //float2 P = viewDirTS.xy / viewDirTS.z * HeightScale;
+    
+    float2 P;
+    
+    float zDivide = max(viewDirTS.z, 1e-4);
+    
+    if (generalHeightScale <= 0.005)
+    {
+        P = viewDirTS.xy / zDivide * HeightScale;
+    }
+    else
+    {
+        P = viewDirTS.xy / zDivide * generalHeightScale;
+    }
+    
+     //P = viewDirTS.xy / viewDirTS.z * HeightScale;
+    
+    float2 deltaUV = P / numLayers;
+    
+    // Coordenadas y profundidad iniciales
+    float2 currUV = texCoords;
+    float currDepth = 0.0f;
+    float mapDepth = 1.0f - g_HeightMap.Sample(g_HeightMap_sampler, currUV).r;
+    
+    // Encontrar la capa donde la profunndidad del displacement map sea menor que la de la capa actual
+    [loop]
+    while (currDepth < mapDepth)
+    {
+        currUV -= deltaUV;
+        currDepth += layerDepth;
+        mapDepth = 1.0f - g_HeightMap.Sample(g_HeightMap_sampler, currUV).r;
+    }
+    
+    // Encontrar la capa anteio y posterior ala interseccion con el displacement map
+    float2 prevUV = currUV + deltaUV;
+    float after = mapDepth - currDepth;
+    float before = (1.0f - g_HeightMap.Sample(g_HeightMap_sampler, prevUV).r)
+                   - (currDepth - layerDepth);
+    
+    // Peso para interpolar entre currUV y prevUV
+    float weight = after / (after - before);
+    
+    // UV finales interpolados
+    return prevUV * weight + currUV * (1.0f - weight);
+    
+   
+    
+}
+
+//float2 SimpleParallaxMapping(float2 uv, float3 viewDirTS)
+//{
+//    float height = g_HeightMap.Sample(g_HeightMap_sampler, uv).r;
+//    return uv - viewDirTS.xy * height * HeightScale;
+    
+//}
+
+//float PCF(float2 uv, float cmpDepth)
+//{
+//    uint w, h; // tamaño del shadow-map
+//    g_ShadowMap.GetDimensions(w, h);
+//    float2 texel = 1.0 / float2(w, h);
+
+//    float vis = 0.0;
+//    [unroll]
+//    for (int x = -1; x <= 1; ++x)
+//    [unroll]
+//        for (int y = -1; y <= 1; ++y)
+//            vis += g_ShadowMap.SampleCmp(g_ShadowMap_sampler,
+//                                     uv + float2(x, y) * texel,
+//                                     cmpDepth); // ¡sin 1-lit!
+//    return vis / 9.0; // 1 = luz, 0 = sombra
+//}
+
+//float shadowTest(float4 posLightFragment)
+//{
+//    // Proyección a NDC [-1,1] y luego a UV [0,1]
+//    float3 proj = posLightFragment.xyz / posLightFragment.w;
+//    float2 uv = proj.xy; //* 0.5f + 0.5f;
+//    float depth = proj.z;
+
+//    // Sesgo para evitar acne
+//    float bias = 0.05; // ajusta a tu escala
+    
+
+//    float lit = g_ShadowMap.SampleCmp(g_ShadowMap_sampler, uv, proj.z - 0.0007f);
+    
+//    return lit;
+    
+
+//    // PCF 3×3
+  
+
+//}
+
+//float ShadowPCF(float4 PosLightH)
+//{
+//    // Transformar a UV [0,1] y profundidad [0,1]
+//    float3 proj = PosLightH.xyz / PosLightH.w;
+//    if (proj.z < 0.0 || proj.z > 1.0)
+//        return 1.0; // fuera del frustum-luz  sin sombra
+
+//    float2 uv = proj.xy; //* 0.5f + 0.5f;
+
+//    //Pequeño bias para evitar acne
+//    const float bias = 0.0007f; // ajusta a tu escala
+
+//    //Tamaño del texel
+//    uint w, h;
+//    g_ShadowMap.GetDimensions(w, h);
+//    float2 texel = 1.0 / float2(w, h);
+
+//    //PCF 3×3
+//    float vis = 0.0;
+//    [unroll]
+//    for (int x = -1; x <= 1; ++x)
+//    [unroll]
+//        for (int y = -1; y <= 1; ++y)
+//            vis += g_ShadowMap.SampleCmp(g_ShadowMap_sampler,
+//                                     uv + float2(x, y) * texel,
+//                                     proj.z - bias);
+
+//    return vis / 9.0; // promedio
+//}
+
+
+float4 main(PSInput IN) : SV_Target
+{
+    //float3 vDir = normalize(IN.viewDirTS);
+    float3 vDir = normalize(IN.tangentViewPos - IN.fragmentPosTS);
+    //float2 uvP = IN.uv;
+    //float2 uvP = ParallaxMap(IN.uv, vDir);
+    //float2 uvP = ParallaxMap(IN.uv, vDir);
+    //float2 uvP = ParallaxOcclusionMap(IN.uv, vDir);
+    //float2 uvP = ParallaxMapping(IN.uv, vDir);
+    float2 uvP;
+    if (parallaxMode == 0)
+    {
+        uvP = simpleParallaxMapping(IN.uv, vDir);
+    }
+    else if (parallaxMode == 1)
+    {
+        uvP = StepParallaxMapping(IN.uv, vDir);
+    }
+    else
+    {
+        //uvP = ParallaxOcclusionMap(IN.uv, vDir);
+        uvP = ParallaxMapping(IN.uv, vDir);
+    }
+    //uvP = ParallaxOcclusionMap(IN.uv, vDir);
+
+        
+        //float2 uvP = StepParallaxMapping(IN.uv, vDir);
+    if (uvP.x > 1.0 || uvP.y > 1.0 || uvP.x < 0.0 || uvP.y < 0.0)
+    {
+        discard;
+       
+
+    }
+    // Calculo de la luz puntual -----------------------------
+    
+    //Ambiental
+        float3 albedo = g_Albedo.Sample(g_Albedo_sampler, uvP).rgb;
+    //float3 ambient = 0.1 * albedo;
+        float3 ambient = albedo * g_LightAttribs.f4AmbientLight.rgb;
+    
+    ////Difuso
+    
+        float3 normal = g_NormalMap.Sample(g_NormalMap_sampler, uvP).rgb;
+        normal = normalize(normal * 2.0 - 1.0);
+    
+        float3 lightDir = normalize(IN.lightPosTS - IN.fragmentPosTS);
+    
+    
+    
+    
+        float diff = max(dot(lightDir, normal), 0.0);
+        float3 diffuse = diff * albedo;
+    
+    
+    // specular
+        float3 reflectDir = reflect(-lightDir, normal);
+        //float3 halfwayDir = normalize(lightDir + IN.viewDirTS);
+        float3 halfwayDir = normalize(lightDir + vDir);
+        float spec = pow(max(dot(normal, halfwayDir), 0.0), 32);
+    
+        float3 specular = float3(0.2, 0.2, 0.2) * spec;
+    
+        float3 proj = IN.fragmentLightPos.xyz / IN.fragmentLightPos.w;
+    //float2 uv = proj.xy * 0.5 + 0.5; // ya en [0-1]
+        float2 uv = float2(proj.x, -proj.y) * 0.5f + 0.5f; //  invierte Y
+        float depth = proj.z - 0.0007; // aplica tu bias aquí
+    
+
+    
+    
+    //float visibility = shadowTest(IN.fragmentLightPos);
+   
+    //float shadow = ShadowCalculation(IN.fragmentLightPos, IN.normalWorld, normalize(IN.lightPos - IN.posWorld));
+    
+        uint cascade = 0;
+        float3 uvw = float3(uv, cascade);
+    
+    
+        float litTest = g_ShadowMap.SampleCmpLevelZero(
+                g_ShadowMap_sampler,
+                uvw, // float3
+                depth); // valor a comparar
+    
+    
+    // Luz direccional + sombra --------------------------------------------------
+    
+
+        //Componente difuso de la luz direccional
+        //float nDotL = saturate(dot(IN.normalWorld, -g_LightAttribs.f4Direction.xyz));
+        float nDotL = saturate(dot(normal, -IN.directionalLightDirTS)); 
+    
+        //float3 Ldir = normalize(-g_LightAttribs.f4Direction.xyz); 
+        float3 Ldir = normalize(-IN.directionalLightDirTS);
+    
+        float3 Hdir = normalize(Ldir +vDir);
+    
+        float specDir = pow(max(dot(normal, Hdir), 0.0), 32);
+   
+    
+        FilteredShadow sh;
+    
+        sh = FilterShadowMap(g_LightAttribs.ShadowAttribs,
+                         g_ShadowMap, g_ShadowMap_sampler,
+                         IN.fragmentLightPosDirLight,
+                         ddx(IN.fragmentLightPosDirLight), ddy(IN.fragmentLightPosDirLight),
+                         IN.posH.w);
+    
+        float shadowVis = sh.fLightAmount;
+    
+        float3 specularDirLight = specDir * float3(0.2, 0.2, 0.2) * // color especular
+                     g_LightAttribs.f4Intensity.rgb * // intensidad luz
+                     shadowVis;
+    
+        float3 diffuseDirLight = (albedo * nDotL) * g_LightAttribs.f4Intensity.rgb * shadowVis;
+    
+        float3 colorFinal = ambient + diffuseDirLight + diffuse + specular + specularDirLight;
+    
+        return float4(colorFinal, 1);
+    
+    //return float4(ambient + (diffuse + specular) , 1.0) + float4(litTest.xxx, 1) * 0.0000000000000000000001;
+    
+    //float heightValue = g_HeightMap.Sample(g_HeightMap_sampler, uvP).r;
+    
+    //float normalValue = g_NormalMap.Sample(g_NormalMap_sampler, uvP).r;
+    
+    
+    ////return float4(color, 1.0);
+    
+    
+    
+    //return float4(color, 1.0) + float4(0.1,0.1,0.1,0)*0.000000000000001*heightValue*HeightScale*NumSteps*normalValue;
+    }
+
+
+
+
