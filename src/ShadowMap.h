@@ -65,7 +65,7 @@ public:
         // Usa topología de triángulos.
         PSOCreateInfo.GraphicsPipeline.RTVFormats[0]                  = TEX_FORMAT_UNKNOWN;
         PSOCreateInfo.GraphicsPipeline.PrimitiveTopology              = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode        = CULL_MODE_BACK;
+        PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode        = CULL_MODE_NONE;
         PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable   = True;
         
         //PSOCreateInfo.GraphicsPipeline.RasterizerDesc.DepthClipEnable = False;

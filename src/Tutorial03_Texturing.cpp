@@ -37,6 +37,7 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include <string>
 
 
 //
@@ -225,11 +226,19 @@ void Tutorial03_Texturing::CreatePipelineState()
 
     // clang-format off
     // Define immutable sampler for g_Texture. Immutable samplers should be used whenever possible
-    SamplerDesc SamLinearClampDesc
+    /*SamplerDesc SamLinearClampDesc
     {
         FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, 
         TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP
-    };
+    };*/
+
+    SamplerDesc SamLinearClampDesc
+        {
+            FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR, FILTER_TYPE_LINEAR,
+            TEXTURE_ADDRESS_WRAP,  // U
+            TEXTURE_ADDRESS_WRAP,  // V
+            TEXTURE_ADDRESS_WRAP   // W
+        };
 
     SamplerDesc ComparsionSampler;
     ComparsionSampler.ComparisonFunc = COMPARISON_FUNC_LESS;
@@ -333,7 +342,7 @@ void Tutorial03_Texturing::InitializeScene()
 {
     // ATRIBUTOS DE LA LUZ -----------------------------------------------
 
-    m_LightAttribs.ShadowAttribs.iNumCascades     = 4;
+    m_LightAttribs.ShadowAttribs.iNumCascades     = 2;
     m_LightAttribs.ShadowAttribs.fFixedDepthBias  = 0.0025f;
     m_LightAttribs.ShadowAttribs.iFixedFilterSize = 5;
     m_LightAttribs.ShadowAttribs.fFilterWorldSize = 0.1f;
@@ -370,10 +379,10 @@ void Tutorial03_Texturing::InitializeScene()
 
     // GEOMETRIA MIA FIGURE BASE -------------------------------------------------------------
 
-    m_Cubo = std::make_unique<Cubo>(m_pDevice, m_pPSO, 0);
-    m_Cubo->SetPosition(float3{0.0f, 2.0f, 0.0f});
+   /* m_Cubo = std::make_unique<Cubo>(m_pDevice, m_pPSO, 0);
+    m_Cubo->SetPosition(float3{0.0f, 2.0f, 0.0f});*/
     m_Piso = std::make_unique<Cubo>(m_pDevice, m_pPSO, 1);
-    m_Piso->SetPosition(float3{0.0f, -1.0f, 0.0f});
+    m_Piso->SetPosition(float3{80.0f, -1.0f, 0.0f});
     m_Piso->SetScale(float3{10.0f, 10.0f, 10.0f});
 
 
@@ -384,21 +393,30 @@ void Tutorial03_Texturing::InitializeScene()
     //OutputDebugStringA("POMMaterial creado\n");
     /*m_Brick->Upload(m_pImmediateContext);
     m_Brick->Bind(m_SRB);*/
-    m_Piso->setMaterial(m_RockPath.get());
-    m_Cubo->setMaterial(m_Brick2.get());
+    m_Piso->setMaterial(m_DungeonStone.get());
+    //m_Cubo->setMaterial(m_Brick2.get());
     
 
-    m_Objetos3D.push_back(std::move(m_Cubo));
+    //m_Objetos3D.push_back(std::move(m_Cubo));
     m_Objetos3D.push_back(std::move(m_Piso));
 
 
     // MODELOS GTLF-----------------------------------------------------
+
+       //const char* modelNames[] = {
+       // "torture_chair/scene.gltf",
+       // "wine_barrel/scene.gltf",
+       // "rusty_cage/scene.gltf",
+       // "skull/scene.gltf",
+       // "treasure_chest/scene.gltf",
+       // "cauldron/scene.gltf"};
 
     GLTF::ModelCreateInfo CI;
     CI.FileName = "torture_chair/scene.gltf";
 
     //m_Model          = std::make_unique<GLTF::Model>(m_pDevice, ModelCI);
 
+    //CI.FileName = modelNames[0];
  
 
     static constexpr GLTF::VertexAttributeDesc MyVertexAttrs[] =
@@ -415,7 +433,9 @@ void Tutorial03_Texturing::InitializeScene()
             {GLTF::BaseColorTextureName, GLTF::DefaultBaseColorTextureAttribId},
             {GLTF::NormalTextureName, GLTF::DefaultNormalTextureAttribId},
             // …otros que quieras…
-            {"heightTexture", /*elige un índice único, p.e.*/ 5}};
+            //{"heightTexture", /*elige un índice único, p.e.*/ 5}
+    
+        };
         
         CI.VertexAttributes    = MyVertexAttrs;
         CI.NumVertexAttributes = _countof(MyVertexAttrs);
@@ -478,16 +498,16 @@ void Tutorial03_Texturing::InitializeScene()
        m_Barril = std::make_unique<GLTF::Model>(m_pDevice, m_pImmediateContext, CI2);
 
 
-       // Rusty cage
+       //// Rusty cage
 
-       GLTF::ModelCreateInfo CI3;
+       //GLTF::ModelCreateInfo CI3;
 
-       CI3.FileName = "rusty_cage/scene.gltf";
-       CI3.VertexAttributes = MyVertexAttrs;
-       CI3.NumVertexAttributes = _countof(MyVertexAttrs);
-       CI3.TextureAttributes = MyTexAttrs;
-       CI3.NumTextureAttributes = _countof(MyTexAttrs);
-       m_Cage = std::make_unique<GLTF::Model>(m_pDevice, m_pImmediateContext, CI3);
+       //CI3.FileName = "rusty_cage/scene.gltf";
+       //CI3.VertexAttributes = MyVertexAttrs;
+       //CI3.NumVertexAttributes = _countof(MyVertexAttrs);
+       //CI3.TextureAttributes = MyTexAttrs;
+       //CI3.NumTextureAttributes = _countof(MyTexAttrs);
+       //m_Cage = std::make_unique<GLTF::Model>(m_pDevice, m_pImmediateContext, CI3);
 
        // Skull
        GLTF::ModelCreateInfo CI4;
@@ -506,13 +526,13 @@ void Tutorial03_Texturing::InitializeScene()
 
        // Cofre
 
-       GLTF::ModelCreateInfo CI5;
-       CI5.FileName = "treasure_chest/scene.gltf";
-       CI5.VertexAttributes = MyVertexAttrs;
-       CI5.NumVertexAttributes = _countof(MyVertexAttrs);
-       CI5.TextureAttributes = MyTexAttrs;
-       CI5.NumTextureAttributes = _countof(MyTexAttrs);
-       m_Chest = std::make_unique<GLTF::Model>(m_pDevice, m_pImmediateContext, CI5);
+       //GLTF::ModelCreateInfo CI5;
+       //CI5.FileName = "treasure_chest/scene.gltf";
+       //CI5.VertexAttributes = MyVertexAttrs;
+       //CI5.NumVertexAttributes = _countof(MyVertexAttrs);
+       //CI5.TextureAttributes = MyTexAttrs;
+       //CI5.NumTextureAttributes = _countof(MyTexAttrs);
+       //m_Chest = std::make_unique<GLTF::Model>(m_pDevice, m_pImmediateContext, CI5);
 
 
        //caldero
@@ -525,6 +545,47 @@ void Tutorial03_Texturing::InitializeScene()
        CI6.NumTextureAttributes = _countof(MyTexAttrs);
        m_Cauldron = std::make_unique<GLTF::Model>(m_pDevice, m_pImmediateContext, CI6);
        //m_Cauldron->PrepareGPUResources(m_pDevice, m_pImmediateContext);
+
+       
+       const char* modelNames[] = {
+           "Altar/scene.gltf",
+           "Barrel/scene.gltf",
+           "Cage/scene.gltf",
+           //"Bed/scene.gltf",
+           //"Column/scene.gltf",
+           "Brazier/scene.gltf",
+           //"Knight/scene.gltf",
+           "BookCase/scene.gltf",
+           "WornBook/scene.gltf",
+           "BoneRest/scene.gltf",
+           "Bed/scene.gltf",
+           "Colum/scene.gltf",
+           "Chest/scene.gltf",
+           "Potions/scene.gltf",
+           "WizardTable/scene.gltf",
+           "WizardCauldron/scene.gltf",
+           "Wardrobe/scene.gltf",
+           "PileCoins/scene.gltf",
+           "Table/scene.gltf",
+
+       };
+
+
+       for (auto modelName: modelNames){
+           GLTF::ModelCreateInfo CI7;
+		   CI7.FileName = modelName;
+		   CI7.VertexAttributes = MyVertexAttrs;
+		   CI7.NumVertexAttributes = _countof(MyVertexAttrs);
+		   CI7.TextureAttributes = MyTexAttrs;
+		   CI7.NumTextureAttributes = _countof(MyTexAttrs);
+		   auto newModel = std::make_unique<GLTF::Model>(m_pDevice, m_pImmediateContext, CI7);
+		   newModel->PrepareGPUResources(m_pDevice, m_pImmediateContext);
+           m_modelsGLTF[modelName] = std::move(newModel);
+           OutputDebugStringA(("Modelo GLTF cargado: " + std::string(modelName) + "\n").c_str());
+        
+       
+       
+       }
 
 
 
@@ -575,7 +636,47 @@ void Tutorial03_Texturing::LoadMaterials() {
         "rocksLow_dis.png",
         "rocksLow_nor.png",
         0.057f); // HeightScale opcional
+    
+    m_DungeonStone = std::make_unique<POMMaterial>(
+		m_pDevice,
+		"dungeonStone.png",
+		"dungeonStone_dis.png",
+		"dungeonStone_nor.png",
+		0.057f); // HeightScale opcional
 
+    m_DungeonFloor = std::make_unique<POMMaterial>(
+		m_pDevice,
+		"dungeonFloor.png",
+		"dungeonFloor_dis.png",
+		"dungeonFloor_nor.png",
+		0.057f); // HeightScale opcional
+    //  Regístralos en el catálogo
+
+    m_glossyMarble = std::make_unique<POMMaterial>(
+		m_pDevice,
+		"glossyMarble.png",
+		"glossyMarble_dis.png",
+		"glossyMarble_nor.png",
+		0.057f); // HeightScale opcional
+
+    auto addMat = [&](const char* name, POMMaterial* pMat) {
+        m_POMCatalog[name] = pMat;
+        m_POMNames.push_back(name);
+    };
+
+    addMat("Dungeon floor", m_DungeonFloor.get());
+    addMat("Dungeon stone", m_DungeonStone.get());
+    addMat("Bricks2", m_Brick2.get());
+    addMat("Rocks2", m_Rocks2.get());
+    addMat("Rock", m_Rock.get());
+    addMat("RockPath", m_RockPath.get());
+    addMat("Brick", m_Brick.get());
+    addMat("Glossy marble", m_glossyMarble.get());
+
+
+    //  Selección por defecto
+    m_pFloorMat = m_POMCatalog["Dungeon floor"];
+    m_pWallMat  = m_POMCatalog["Dungeon stone"];
       //m_Rocks2->CreateSRB(m_pPSO);
 
     //m_LeatherPadded = std::make_unique<POMMaterial>(
@@ -587,6 +688,151 @@ void Tutorial03_Texturing::LoadMaterials() {
 
 
 }
+
+void Tutorial03_Texturing::InitializeTileScene(){
+
+    m_TiledMap = TiledMap();
+    if (m_TiledMap.Load("mapaMazmorra.json")) {
+    
+        OutputDebugStringA("Mapa cargado\n");
+	}
+	else {
+		OutputDebugStringA("Error al cargar el mapa\n");
+    
+    };
+
+    constexpr char suffix[] = "/scene.gltf";
+    // Mapea los nombres de los modelos a los objetos GLTF
+    std::unordered_map<std::string, GLTF::Model*> models;
+
+    for (auto& par:m_modelsGLTF ){
+        const auto& modelName = par.first;
+		auto& model = par.second;
+        std::string formattedName = modelName;
+        
+        auto pos = formattedName.rfind(suffix);
+        if (pos != std::string::npos && pos + std::strlen(suffix) == formattedName.size())
+        {
+            formattedName.erase(pos);
+        }
+
+
+        models[formattedName] = model.get();
+
+		OutputDebugStringA(("Modelo GLTF añadido: " + modelName + "\n").c_str());
+    
+    }
+
+
+
+
+
+    m_TiledScene = TileScene();
+
+    m_TiledScene.Build(m_TiledMap, models, 0, 1);
+
+    //Generar malla del piso
+
+    std::vector<TileVertex> FloorVerts;
+    std::vector<uint32_t>   FloorIdx;
+
+    m_TiledScene.BuildCombinedMesh(m_TiledMap, TiledMap::LayerType::FloorsWalls, TileScene::Want::Floor,FloorVerts, FloorIdx );
+
+    ////
+    //struct FloorMesh
+    //{
+    //    RefCntAutoPtr<IBuffer> VertexBuffer;
+    //    RefCntAutoPtr<IBuffer> IndexBuffer;
+    //    uint32_t               NumIndices;
+    //};
+
+    //// 
+     // 4-B)  Vertex buffer ------------------------------------------------------
+    m_FloorMesh = FloorMesh();
+
+
+    BufferDesc VBDesc;
+    VBDesc.Name      = "Floor VB";
+    VBDesc.BindFlags = BIND_VERTEX_BUFFER;
+    VBDesc.Usage     = USAGE_IMMUTABLE;
+    VBDesc.Size      = static_cast<Uint32>(FloorVerts.size() * sizeof(TileVertex));
+
+    BufferData VBData;
+    VBData.pData    = FloorVerts.data();
+    VBData.DataSize = VBDesc.Size;
+
+    m_pDevice->CreateBuffer(VBDesc, &VBData, &m_FloorMesh.VertexBuffer);
+
+    // 4-C)  Index buffer -------------------------------------------------------
+    BufferDesc IBDesc;
+    IBDesc.Name      = "Floor IB";
+    IBDesc.BindFlags = BIND_INDEX_BUFFER;
+    IBDesc.Usage     = USAGE_IMMUTABLE;
+    IBDesc.Size      = static_cast<Uint32>(FloorIdx.size() * sizeof(uint32_t));
+
+    BufferData IBData;
+    IBData.pData    = FloorIdx.data();
+    IBData.DataSize = IBDesc.Size;
+
+    m_pDevice->CreateBuffer(IBDesc, &IBData, &m_FloorMesh.IndexBuffer);
+
+    //poner numero indices
+
+    m_FloorMesh.NumIndices = static_cast<Uint32>(FloorIdx.size());
+
+
+
+
+    OutputDebugStringA("TiledScene creado\n");
+}
+
+void Tutorial03_Texturing::ReConstruirTileScene(std::string mapaEscena)
+{
+    m_TiledMap = TiledMap();
+    if (m_TiledMap.Load("mapaMazmorra.json"))
+    {
+
+        OutputDebugStringA("Mapa cargado\n");
+    }
+    else
+    {
+        OutputDebugStringA("Error al cargar el mapa\n");
+    };
+
+    constexpr char suffix[] = "/scene.gltf";
+    // Mapea los nombres de los modelos a los objetos GLTF
+    std::unordered_map<std::string, GLTF::Model*> models;
+
+    for (auto& par : m_modelsGLTF)
+    {
+        const auto& modelName     = par.first;
+        auto&       model         = par.second;
+        std::string formattedName = modelName;
+
+        auto pos = formattedName.rfind(suffix);
+        if (pos != std::string::npos && pos + std::strlen(suffix) == formattedName.size())
+        {
+            formattedName.erase(pos);
+        }
+
+
+        models[formattedName] = model.get();
+
+        OutputDebugStringA(("Modelo GLTF añadido: " + modelName + "\n").c_str());
+    }
+
+
+
+
+
+    m_TiledScene = TileScene();
+
+    m_TiledScene.Build(m_TiledMap, models, 0, 1);
+
+
+
+}
+
 void Tutorial03_Texturing::Initialize(const SampleInitInfo& InitInfo)
 {
     
@@ -601,6 +847,10 @@ void Tutorial03_Texturing::Initialize(const SampleInitInfo& InitInfo)
     LoadTexture();
     LoadMaterials();
     InitializeScene();
+
+    InitializeTileScene();
+
+
     
     m_DungeonGenerator.Generate(60, 40, 10, 20, 20);
     m_DungeonGenerator.SavePPM("Dungeon.ppm");
@@ -619,6 +869,7 @@ void Tutorial03_Texturing::Initialize(const SampleInitInfo& InitInfo)
 
     m_ShadowMap->Initialize(m_pDevice, actualWidth, actualHeight);
 
+
 }
 
 // Render a frame
@@ -630,7 +881,7 @@ void Tutorial03_Texturing::Render()
     //m_pImmediateContext->ClearDepthStencil(m_ShadowMap->GetDSV(), CLEAR_DEPTH_FLAG, 1.f, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     m_pImmediateContext->SetPipelineState(m_ShadowMap->GetShadowPSO());
-    OutputDebugStringA("PSO sombras seteado\n");
+    //OutputDebugStringA("PSO sombras seteado\n");
 
 
     RenderShadowPass();
@@ -732,13 +983,15 @@ void Tutorial03_Texturing::RenderizarObjetos()
     }
     auto cascade = float4x4::Translation(float3(0.0f, 0.0f, 0.0f));
 
-    RenderizarObjeto(m_Model.get(), false, cascade, float4x4::Translation(float3(15.0f,0.0f,0.0f)));
-    //RenderizarObjeto(m_Barril.get(), false, cascade, float4x4::Translation(float3(10.0f, 3.0f, 0.0f)) * float4x4::Scale(float3(0.01f, 0.01f, 0.01f)));
-    RenderizarObjeto(m_Cage.get(), false, cascade, float4x4::Translation(float3(17.50f, 0.0f, 0.0f)) );
+    RenderizarTileScene(false);
 
-    RenderizarObjeto(m_Skull.get(), false, cascade, float4x4::Translation(float3(20.0f, 0.0f, 0.0f)));
-    RenderizarObjeto(m_Chest.get(), false, cascade, float4x4::Translation(float3(22.50f, 0.0f, 0.0f)));
-    RenderizarObjeto(m_Cauldron.get(), false, cascade, float4x4::Translation(float3(25.0f, 0.0f, 0.0f)));
+    //RenderizarObjeto(m_Model.get(), false, cascade, float4x4::Translation(float3(15.0f,0.0f,0.0f)));
+    ////RenderizarObjeto(m_Barril.get(), false, cascade, float4x4::Translation(float3(10.0f, 3.0f, 0.0f)) * float4x4::Scale(float3(0.01f, 0.01f, 0.01f)));
+    //RenderizarObjeto(m_Cage.get(), false, cascade, float4x4::Translation(float3(17.50f, 0.0f, 0.0f)) );
+
+    //RenderizarObjeto(m_Skull.get(), false, cascade, float4x4::Translation(float3(20.0f, 0.0f, 0.0f)));
+    //RenderizarObjeto(m_Chest.get(), false, cascade, float4x4::Translation(float3(22.50f, 0.0f, 0.0f)));
+    //RenderizarObjeto(m_Cauldron.get(), false, cascade, float4x4::Translation(float3(25.0f, 0.0f, 0.0f)));
 
 
 
@@ -800,14 +1053,20 @@ void Tutorial03_Texturing::RenderizarObjetos()
 
 
          if (tile.MaterialId == 0) {
-            m_RockPath->Upload(m_pImmediateContext);
-            m_RockPath->Bind(m_SRB);
+      /*      m_RockPath->Upload(m_pImmediateContext);
+            m_RockPath->Bind(m_SRB);*/
+             m_pFloorMat->Upload(m_pImmediateContext);
+             m_pFloorMat->Bind(m_SRB);
+
          
          }
 
          else if (tile.MaterialId ==1) {
-            m_Brick2->Upload(m_pImmediateContext);
-			m_Brick2->Bind(m_SRB);
+      /*      m_Brick2->Upload(m_pImmediateContext);
+			m_Brick2->Bind(m_SRB);*/
+             m_pWallMat->Upload(m_pImmediateContext);
+             m_pWallMat->Bind(m_SRB);
+
 		 }
 
          m_SRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_ShadowMap")->Set(m_ShadowMapMgr.GetSRV(), SET_SHADER_RESOURCE_FLAG_ALLOW_OVERWRITE);
@@ -833,6 +1092,332 @@ void Tutorial03_Texturing::RenderizarObjetos()
 
 
 }
+
+ void Tutorial03_Texturing::RenderizarTileScene(bool isShadowPass, float4x4 cascadeProj) {
+
+     if (!isShadowPass)
+     {
+         auto     cuboBase = new Cubo(m_pDevice, m_pPSO, 0);
+         IBuffer* pvB[]    = {cuboBase->GetVertexBuffer()};
+         Uint64   offset[] = {0};
+
+         m_pImmediateContext->SetVertexBuffers(0, 1, pvB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+         m_pImmediateContext->SetIndexBuffer(cuboBase->GetIndexBuffer(), 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+         //
+         //// -------------------- Renderizar piso siendo una sola malla --------------------------
+         //auto     viewProj = m_Camera.GetViewMatrix() * m_Camera.GetProjMatrix();
+
+
+         //IBuffer* pvB[] = {m_FloorMesh.VertexBuffer};
+         //Uint64 offset[] = {0};
+
+         //m_pImmediateContext->SetVertexBuffers(0, 1, pvB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+         //m_pImmediateContext->SetIndexBuffer(m_FloorMesh.IndexBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+
+
+       
+
+
+        // // No proyectan sombras mientras
+        m_pImmediateContext->SetPipelineState(m_pPSO);
+
+
+        // // Constantes de intento de luz spot
+        // {
+        //     LightConstants cbDataL = {};
+
+        //     cbDataL.g_LightPos      = m_LightCamera.GetPos();
+        //     cbDataL.g_ViewProjLight = m_LightCamera.GetViewMatrix() * m_LightCamera.GetProjMatrix();
+        // }
+
+        // // Luz direccional
+        // {
+        //     MapHelper<LightAttribs> CBHelperLightAttribs(m_pImmediateContext, m_LightAttribsCB, MAP_WRITE, MAP_FLAG_DISCARD);
+        //     *CBHelperLightAttribs = m_LightAttribs;
+        // }
+
+
+        // {
+        //     MapHelper<parallaxConstants> CBHelperParallax(m_pImmediateContext, m_ParallaxAttribsCB, MAP_WRITE, MAP_FLAG_DISCARD);
+        //     *CBHelperParallax = m_ParallaxAttribs;
+        // }
+
+
+
+
+        // 
+        //    {
+        //     ConstantsData cbData{};
+        //     cbData.g_World = float4x4::Translation(float3(0.0f, 0.0f, 0.0f));
+
+        //     cbData.g_ViewProj  = m_Camera.GetViewMatrix() * m_Camera.GetProjMatrix();
+        //     cbData.g_CameraPos = m_Camera.GetPos();
+        //     MapHelper<ConstantsData> CBHelper(m_pImmediateContext, m_BufferConstantsObjects, MAP_WRITE, MAP_FLAG_DISCARD);
+
+        //     *CBHelper = cbData;
+        // }
+
+
+        //m_DungeonFloor->Upload(m_pImmediateContext);
+        //m_DungeonFloor->Bind(m_SRB);
+
+
+        // m_SRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_ShadowMap")->Set(m_ShadowMapMgr.GetSRV(), SET_SHADER_RESOURCE_FLAG_ALLOW_OVERWRITE);
+        // m_pImmediateContext->CommitShaderResources(m_SRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+        // DrawIndexedAttribs drawAttrs;
+        // drawAttrs.IndexType  = VT_UINT32;
+        // drawAttrs.NumIndices = m_FloorMesh.NumIndices;
+        // drawAttrs.Flags      = DRAW_FLAG_VERIFY_ALL;
+        // m_pImmediateContext->DrawIndexed(drawAttrs);
+          
+
+         // -------------------- Renderizar piso siendo una sola malla final --------------------------
+
+
+
+         for (auto& tile : m_TiledScene.Tiles())
+         {
+
+             {
+                 ConstantsData cbData{};
+                 cbData.g_World = tile.World;
+
+                 cbData.g_ViewProj  = m_Camera.GetViewMatrix() * m_Camera.GetProjMatrix();
+                 cbData.g_CameraPos = m_Camera.GetPos();
+                 MapHelper<ConstantsData> CBHelper(m_pImmediateContext, m_BufferConstantsObjects, MAP_WRITE, MAP_FLAG_DISCARD);
+
+                 *CBHelper = cbData;
+             }
+
+             //Output de materialID
+
+             // OutputDebugStringA(("Material ID: " + std::to_string(tile.MaterialId) + "\n").c_str());
+
+             if (tile.MaterialId == 0)
+             {
+                 /*m_RockPath->Upload(m_pImmediateContext);
+                 m_RockPath->Bind(m_SRB);*/
+
+                 /*m_DungeonStone->Upload(m_pImmediateContext);
+                 m_DungeonStone->Bind(m_SRB);*/
+
+                /* m_DungeonFloor->Upload(m_pImmediateContext);
+                 m_DungeonFloor->Bind(m_SRB);*/
+
+                 m_pFloorMat->Upload(m_pImmediateContext);
+                 m_pFloorMat->Bind(m_SRB);
+
+
+             }
+             else if (tile.MaterialId == 1)
+             {
+                 /*m_Brick2->Upload(m_pImmediateContext);
+                 m_Brick2->Bind(m_SRB);*/
+              /*   m_DungeonStone->Upload(m_pImmediateContext);
+                 m_DungeonStone->Bind(m_SRB);*/
+                 m_pWallMat->Upload(m_pImmediateContext);
+                 m_pWallMat->Bind(m_SRB);
+
+
+             }
+
+             m_SRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_ShadowMap")->Set(m_ShadowMapMgr.GetSRV(), SET_SHADER_RESOURCE_FLAG_ALLOW_OVERWRITE);
+             m_pImmediateContext->CommitShaderResources(m_SRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+             DrawIndexedAttribs drawAttrs;
+             drawAttrs.IndexType  = VT_UINT32;
+             drawAttrs.NumIndices = cuboBase->GetNumIndices();
+             drawAttrs.Flags      = DRAW_FLAG_VERIFY_ALL;
+             m_pImmediateContext->DrawIndexed(drawAttrs);
+         }
+     }
+
+
+
+     // ----------------------------------- Renderizar modelos GLTF -----------------------------------
+     if (!isShadowPass) { 
+         m_pImmediateContext->SetPipelineState(m_pPSOGLTF);
+     }
+     else
+     {
+         m_pImmediateContext->SetPipelineState(m_ShadowMap->GetShadowPSO());
+     }
+     //Tamaño de m_tiledScene.objects() en outpud
+     //OutputDebugStringA(("Tamaño de m_TiledScene.Objects(): " + std::to_string(m_TiledScene.Objects().size()) + "\n").c_str());
+
+
+     for (auto& tileObjeto: m_TiledScene.Objects()){
+        
+         auto modeloGLTF = tileObjeto.pModel;
+
+
+         GLTF::ModelTransforms transforms;
+
+         modeloGLTF->ComputeTransforms(modeloGLTF->DefaultSceneId, transforms);
+
+       
+    // 2) Recorre cada nodo del modelo
+         for (size_t nodeIdx = 0; nodeIdx < modeloGLTF->Nodes.size(); ++nodeIdx)
+         {
+             const auto& node = modeloGLTF->Nodes[nodeIdx];
+             if (node.pMesh == nullptr)
+                 continue; // este nodo no tiene geometría
+
+             // 3) Obtén su matrix mundo
+             const float4x4& world = transforms.NodeGlobalMatrices[nodeIdx] * tileObjeto.World;
+
+             // 4) Por cada primitiva dentro de ese mesh
+             for (const auto& prim : node.pMesh->Primitives)
+             {
+                 // 5) Bind VB/IB
+                 Uint64   offsets[] = {0};
+                 IBuffer* pVB[]     = {modeloGLTF->GetVertexBuffer(0)};
+                 m_pImmediateContext->SetVertexBuffers(
+                     0, 1, pVB, offsets,
+                     RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                     SET_VERTEX_BUFFERS_FLAG_RESET);
+                 m_pImmediateContext->SetIndexBuffer(
+                     modeloGLTF->GetIndexBuffer(), 0,
+                     RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+                 if (!isShadowPass)
+                 {
+                     //m_pImmediateContext->SetPipelineState(m_pPSOGLTF);
+                     // 6a) Actualiza constantes de cámara+world
+                     ConstantsData cb{world,
+                                      m_Camera.GetViewMatrix() * m_Camera.GetProjMatrix(),
+                                      m_Camera.GetPos()};
+                     {
+                         MapHelper<ConstantsData> helper(
+                             m_pImmediateContext,
+                             m_BufferConstantsObjects,
+                             MAP_WRITE, MAP_FLAG_DISCARD);
+                         *helper = cb;
+                     }
+
+                     materialConstants matCb{};
+
+                     matCb.materialId = prim.MaterialId;
+                     matCb._mPad = 0; // Padding para alinear a 16 bytes
+                     matCb._mPd1 = 0; // Padding para alinear a 16 bytes
+                     matCb._mPd2 = 0; // Padding para alinear a 16 bytes
+
+
+                     {
+                         MapHelper<materialConstants> helper(
+                             m_pImmediateContext,
+                             m_MaterialAttribsCB,
+                             MAP_WRITE, MAP_FLAG_DISCARD);
+                         *helper = matCb;
+                     }
+
+
+                     // Constantes de intento de luz spot
+                     {
+                         LightConstants cbDataL = {};
+
+                         cbDataL.g_LightPos      = m_LightCamera.GetPos();
+                         cbDataL.g_ViewProjLight = m_LightCamera.GetViewMatrix() * m_LightCamera.GetProjMatrix();
+
+
+                         MapHelper<LightConstants> CBHelperL(m_pImmediateContext, m_BufferLightConstants, MAP_WRITE, MAP_FLAG_DISCARD);
+                         *CBHelperL = cbDataL;
+                     }
+
+
+                     // Luz direccional
+                     {
+                         MapHelper<LightAttribs> CBHelperLightAttribs(m_pImmediateContext, m_LightAttribsCB, MAP_WRITE, MAP_FLAG_DISCARD);
+                         *CBHelperLightAttribs = m_LightAttribs;
+                     }
+
+                     m_SRBGLTF->GetVariableByName(SHADER_TYPE_PIXEL, "g_ShadowMap")->Set(m_ShadowMapMgr.GetSRV(), SET_SHADER_RESOURCE_FLAG_ALLOW_OVERWRITE);
+
+
+                     // 6b) Bindea las texturas del material de la primitiva
+                     auto& mat = modeloGLTF->Materials[prim.MaterialId];
+                     // Recorre sólo los atributos de textura activos
+                     for (Uint32 i = 0; i < modeloGLTF->GetNumTextureAttributes(); ++i)
+                     {
+                         const auto&  texAttr = modeloGLTF->GetTextureAttribute(i);
+                         const Uint32 slot    = texAttr.Index; // <-- aquí, usa el Id, no "i"
+                         if (!mat.IsTextureAttribActive(slot))
+                             continue;
+
+                         int   texId   = mat.GetTextureId(slot);
+                         auto* pTex    = modeloGLTF->GetTexture(texId);
+                         auto* pTexSRV = pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+
+                         auto correctName = AttrToShaderName.at(texAttr.Name);
+                        // OutputDebugStringA((correctName + " Original Name: " + texAttr.Name + "\n").c_str());
+
+                         m_SRBGLTF->GetVariableByName(
+                                      SHADER_TYPE_PIXEL, correctName.c_str())
+                             ->Set(pTexSRV, SET_SHADER_RESOURCE_FLAG_ALLOW_OVERWRITE);
+                     }
+
+
+                     // 6c) Commit y draw
+                     m_pImmediateContext->CommitShaderResources(
+                         m_SRBGLTF, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                 }
+                 else
+                 {   
+                     //auto cascadeProj = float4x4::Identity();
+                     // Pase de sombra: sólo world + cascadeProj
+                    /* ShadowConstantsData scb{world, cascadeProj};
+                     {
+                         MapHelper<ShadowConstantsData> helper(
+                             m_pImmediateContext,
+                             m_ShadowMap->GetCB(),
+                             MAP_WRITE, MAP_FLAG_DISCARD);
+                         *helper = scb;
+                     }*/
+
+                     ShadowConstantsData cbData = {};
+
+                     cbData.g_LightViewProj = cascadeProj;
+                     cbData.g_World         = world;
+
+                     MapHelper<ShadowConstantsData> CBHelper(m_pImmediateContext, m_ShadowMap->GetCB(), MAP_WRITE, MAP_FLAG_DISCARD);
+                     *CBHelper = cbData;
+
+
+                     m_pImmediateContext->CommitShaderResources(
+                         m_ShadowMap->GetSRB(),
+                         RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                 }
+
+                 // 7) DrawIndexed
+                 DrawIndexedAttribs drawAttrs;
+                 drawAttrs.IndexType          = VT_UINT32;
+                 drawAttrs.NumIndices         = prim.IndexCount;
+                 drawAttrs.FirstIndexLocation = prim.FirstIndex;
+                 drawAttrs.BaseVertex         = modeloGLTF->GetBaseVertex();
+                 drawAttrs.Flags              = DRAW_FLAG_VERIFY_ALL;
+                 m_pImmediateContext->DrawIndexed(drawAttrs);
+             }
+         }
+
+
+     
+     
+     
+     
+     
+     
+     
+     }
+ 
+ 
+    // ----------------------------------- Renderizar modelos GLTF -----------------------------------
+ 
+ 
+ }
+ 
 
 
 void Tutorial03_Texturing::RenderShadowPass()
@@ -922,6 +1507,10 @@ void Tutorial03_Texturing::RenderShadowPass()
 			RenderizarObjeto(objeto.get(), true, WorldToLightProjSpaceMatr);
 		}
 
+        RenderizarTileScene(true, WorldToLightProjSpaceMatr);
+
+
+
     }
 
     if (m_ShadowSettings.iShadowMode > SHADOW_MODE_PCF)
@@ -938,7 +1527,7 @@ void Tutorial03_Texturing::RenderizarObjeto(Objeto3D* objeto, bool isShadowPass,
     Uint64   offset[] = {0};
 
     auto viewProj = m_Camera.GetViewMatrix() * m_Camera.GetProjMatrix();
-    PrintFloat4x4(viewProj, "viewProj");
+    //PrintFloat4x4(viewProj, "viewProj");
 
     m_pImmediateContext->SetVertexBuffers(0, 1, pVB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
@@ -1014,8 +1603,8 @@ void Tutorial03_Texturing::RenderizarObjeto(Objeto3D* objeto, bool isShadowPass,
             cbData.g_World             = objeto->GetWorldTransform();
 
 
-            PrintFloat4x4(m_LightCamera.GetViewMatrix(), "LightView");
-            PrintFloat4x4(m_LightCamera.GetProjMatrix(), "LightProj");
+            //PrintFloat4x4(m_LightCamera.GetViewMatrix(), "LightView");
+            //PrintFloat4x4(m_LightCamera.GetProjMatrix(), "LightProj");
 
 
             MapHelper<ShadowConstantsData> CBHelper(m_pImmediateContext, m_ShadowMap->GetCB(), MAP_WRITE, MAP_FLAG_DISCARD);
@@ -1038,11 +1627,11 @@ void Tutorial03_Texturing::RenderizarObjeto(Objeto3D* objeto, bool isShadowPass,
     //OutputDebugStringA("Dibujando cubo sombras\n");
     if (!isShadowPass)
 	{
-		OutputDebugStringA("Dibujando objeto\n");
+		//OutputDebugStringA("Dibujando objeto\n");
 	}
 	else
 	{
-		OutputDebugStringA("Dibujando objeto sombras\n");
+		//OutputDebugStringA("Dibujando objeto sombras\n");
 	}
 
 }
@@ -1144,7 +1733,7 @@ void Tutorial03_Texturing::RenderizarObjeto(GLTF::Model* modelo, bool isShadowPa
                     auto* pTexSRV = pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
 
                     auto correctName = AttrToShaderName.at(texAttr.Name);
-                    OutputDebugStringA((correctName + " Original Name: " + texAttr.Name + "\n").c_str());
+                    //OutputDebugStringA((correctName + " Original Name: " + texAttr.Name + "\n").c_str());
 
                     m_SRBGLTF->GetVariableByName(
                                  SHADER_TYPE_PIXEL, correctName.c_str())
@@ -1435,7 +2024,7 @@ void Tutorial03_Texturing::CreatePipelineStateGLTF() {
     ImmutableSamplerDesc ImtblSamplers[] = 
     {
         {SHADER_TYPE_PIXEL, "g_Albedo", SamLinearClampDesc},
-        {SHADER_TYPE_PIXEL, "g_HeightMap", SamLinearClampDesc},
+        //{SHADER_TYPE_PIXEL, "g_HeightMap", SamLinearClampDesc},
         {SHADER_TYPE_PIXEL, "g_NormalMap", SamLinearClampDesc},
         {SHADER_TYPE_PIXEL, "g_ShadowMap", ComparsionSampler},
     };
@@ -1470,8 +2059,8 @@ void Tutorial03_Texturing::CreatePipelineStateGLTF() {
     m_SRBGLTF->GetVariableByName(SHADER_TYPE_VERTEX, "LightConstants")->Set(m_BufferLightConstants);
     m_SRBGLTF->GetVariableByName(SHADER_TYPE_PIXEL, "cbLightAttribs")->Set(m_LightAttribsCB);
     m_SRBGLTF->GetVariableByName(SHADER_TYPE_VERTEX, "cbLightAttribs")->Set(m_LightAttribsCB);
-    m_SRBGLTF->GetVariableByName(SHADER_TYPE_PIXEL, "cbPOM")->Set(m_ParallaxAttribsCB);
-    m_SRBGLTF->GetVariableByName(SHADER_TYPE_PIXEL, "parallaxConstants")->Set(m_ParallaxAttribsCB);
+    //m_SRBGLTF->GetVariableByName(SHADER_TYPE_PIXEL, "cbPOM")->Set(m_ParallaxAttribsCB);
+    //m_SRBGLTF->GetVariableByName(SHADER_TYPE_PIXEL, "parallaxConstants")->Set(m_ParallaxAttribsCB);
     m_SRBGLTF->GetVariableByName(SHADER_TYPE_PIXEL, "g_ShadowMap")->Set(m_ShadowMapMgr.GetSRV());
 
 
@@ -1540,24 +2129,58 @@ void Tutorial03_Texturing::createShadowMapManager() {
 }
 
 
-void Tutorial03_Texturing::UpdateUI(){
+void Tutorial03_Texturing::UpdateUI()
+{
     ImGui::Begin("Light settings");
-    ImGui::gizmo3D("Light direction", reinterpret_cast<float3&>(m_LightAttribs.f4Direction), ImGui::GetTextLineHeight() * 10);
-
-    /*ImGui::Text("Light intensity");
-    ImGui::SliderFloat("Intensity", &m_LightAttribs.f4Intensity.x, 0.0f, 1.0f);*/
+    ImGui::gizmo3D("Light direction",
+                   reinterpret_cast<float3&>(m_LightAttribs.f4Direction),
+                   ImGui::GetTextLineHeight() * 10);
 
     ImGui::Separator();
 
+    // -------------------- TILE SCENE -------------------------
+    if (ImGui::Button("Recargar mapa"))
+        ReConstruirTileScene("mapaMazmorra.json");
+
+ /*   const char* FloorOpts[] = {
+        "Dungeon floor", "Dungeon stone",
+        "Bricks2", "Rocks2"};
+    const char* WallOpts[] = {
+        "Dungeon stone", "Bricks2",
+        "Rocks2", "Dungeon floor"};*/
+
+    static int floorIdx = 0, wallIdx = 1; // índices en m_POMNames
+    if (ImGui::Combo(
+            "Floor texture", &floorIdx,
+            [](void* data, int idx, const char** out) {
+                const auto& names = *static_cast<std::vector<std::string>*>(data);
+                *out              = names[idx].c_str();
+                return true;
+            },
+            &m_POMNames, static_cast<int>(m_POMNames.size())))
+    {
+        SelectMaterial(m_POMNames[floorIdx], m_pFloorMat);
+    }
+
+    if (ImGui::Combo(
+            "Wall texture", &wallIdx,
+            [](void* data, int idx, const char** out) {
+                const auto& names = *static_cast<std::vector<std::string>*>(data);
+                *out              = names[idx].c_str();
+                return true;
+            },
+            &m_POMNames, static_cast<int>(m_POMNames.size())))
+    {
+        SelectMaterial(m_POMNames[wallIdx], m_pWallMat);
+    }
+
+    // ---------------- PARALLAX -------------------------------
+    ImGui::Separator();
     ImGui::Text("Parallax settings");
-    ImGui::SliderFloat("Height scale", &m_ParallaxAttribs.generalHeightScale, 0.0f, 1.0f);
-    ImGui::SliderInt("Parallax mode", &m_ParallaxAttribs.parallaxMode, 0, 2);
-
-
+    ImGui::SliderFloat("Height", &m_ParallaxAttribs.generalHeightScale, 0.0f, 1.0f);
+    ImGui::SliderInt("Mode", &m_ParallaxAttribs.parallaxMode, 0, 2);
 
     ImGui::End();
-
-
 }
 
 

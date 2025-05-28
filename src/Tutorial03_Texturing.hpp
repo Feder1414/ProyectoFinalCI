@@ -43,6 +43,8 @@
 #include "stb_image.h"
 #include "DungeonGenerator.h"
 #include "DungeonScene.h"
+#include "TiledMap.h"
+#include "TiledScene.h"
 
 
 
@@ -113,7 +115,19 @@ private:
     void InitializeScene();
     void LoadMaterials();
     void CreatePipelineStateGLTF();
-    
+    void InitializeTileScene();
+    void RenderizarTileScene(bool isShadowPass, float4x4 cascadeProj = float4x4::Translation(float3(0.0f, 0.0f, 0.0f)));
+    void ReConstruirTileScene(std::string mapaEscena = "mapaMazmorra.json");
+
+    // helper cómodo
+    void SelectMaterial(const std::string& key, POMMaterial*& dst)
+    {
+        auto it = m_POMCatalog.find(key);
+        if (it != m_POMCatalog.end())
+            dst = it->second;
+    }
+
+
 
     RefCntAutoPtr<IPipelineState>         m_pPSO;
     RefCntAutoPtr<IPipelineState>         m_pPSOGLTF;
@@ -121,6 +135,14 @@ private:
     RefCntAutoPtr<ITextureView>           m_TextureSRV;
     RefCntAutoPtr<IShaderResourceBinding> m_SRB;
     RefCntAutoPtr<IShaderResourceBinding> m_SRBGLTF;
+
+
+    POMMaterial* m_pFloorMat = nullptr; // textura usada cuando MaterialId == 0
+    POMMaterial* m_pWallMat  = nullptr; // textura usada cuando MaterialId == 1
+    int          m_FloorSel  = 0;       // índices para los combos de ImGui
+    int          m_WallSel   = 0;
+
+
 
     float4x4                              m_WorldViewProjMatrix;
     RefCntAutoPtr<IBuffer>                m_BufferConstantsObjects;
@@ -134,6 +156,9 @@ private:
     std::unique_ptr<GLTF::Model>         m_Skull;
     std::unique_ptr<GLTF::Model>         m_Chest;
     std::unique_ptr<GLTF::Model>         m_Cauldron;
+    std::unordered_map<std::string, POMMaterial*> m_POMCatalog; 
+    std::vector<std::string>                      m_POMNames;  
+
 
     std::unique_ptr<POMMaterial>          m_Brick; // en tu .hpp
     std::unique_ptr<POMMaterial>          m_Brick2; // en tu .hpp
@@ -141,6 +166,9 @@ private:
     std::unique_ptr<POMMaterial>          m_RockPath; // en tu .hpp
     std::unique_ptr<POMMaterial>          m_Rocks2; // en tu .hpp
     std::unique_ptr<POMMaterial>          m_LeatherPadded; // en tu .hpp
+    std::unique_ptr<POMMaterial>          m_DungeonStone; // en tu .hpp
+    std::unique_ptr<POMMaterial>          m_DungeonFloor; // en tu .hpp
+    std::unique_ptr<POMMaterial>          m_glossyMarble; // en tu .hpp
     std::unique_ptr<ShadowMap>  m_ShadowMap; 
     std::unique_ptr<GLTF::Model>          m_Model;
     std::vector<std::unique_ptr<Objeto3D>> m_ModelListGLTF;
@@ -150,9 +178,24 @@ private:
     DungeonGenerator m_DungeonGenerator;
     DungeonScene m_DungeonScene;
 
+    TiledMap m_TiledMap;
+    TileScene m_TiledScene;
+
+    std::unordered_map<std::string, std::unique_ptr<GLTF::Model>> m_modelsGLTF;
 
 
 
+
+    struct FloorMesh
+    {
+        RefCntAutoPtr<IBuffer> VertexBuffer;
+        RefCntAutoPtr<IBuffer> IndexBuffer;
+        uint32_t NumIndices;
+
+
+    };
+
+    FloorMesh m_FloorMesh; // piso de la escena
 
     //ShadowMapManager m_ShadowMapManager;
 
@@ -188,6 +231,7 @@ private:
     RefCntAutoPtr<IBuffer>  m_MaterialAttribsCB; // VS+PS (dirección luz, cascadas)
     RefCntAutoPtr<ISampler> m_pCmpSampler;     // PCF
     RefCntAutoPtr<ISampler> m_pAnisoSampler;   // VSM / EVSM
+
     bool                    m_PackMatrixRowMajor = true;
 
 
