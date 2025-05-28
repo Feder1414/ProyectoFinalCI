@@ -5,7 +5,7 @@
 
 Texture2DArray g_Albedo;
 
-Texture2DArray g_HeightMap;
+//Texture2DArray g_HeightMap;
 
 Texture2DArray g_NormalMap;
 
@@ -22,22 +22,22 @@ SamplerComparisonState g_ShadowMap_sampler;
 
 
 // Constantes para el parallax occlusion mapping
-cbuffer cbPOM 
-{
-    float HeightScale; 
-    float _Pad0;
-    float _Pad1;
-    uint NumSteps; 
-};
+//cbuffer cbPOM 
+//{
+//    float HeightScale; 
+//    float _Pad0;
+//    float _Pad1;
+//    uint NumSteps; 
+//};
 
-cbuffer parallaxConstants
-{
-    uint parallaxMode;
-    float _pPad;
-    float _pPd1;
-    float generalHeightScale;
+//cbuffer parallaxConstants
+//{
+//    uint parallaxMode;
+//    float _pPad;
+//    float _pPd1;
+//    float generalHeightScale;
     
-};
+//};
 
 cbuffer cbLightAttribs
 {
@@ -73,146 +73,146 @@ struct PSInput
 
 
 
-float2 simpleParallaxMapping(float2 texCoords, float3 viewDirTS)
-{
-    float currentHeight = g_HeightMap.Sample(g_HeightMap_sampler, float3(texCoords,materialId)).r;
-    return generalHeightScale < 0.005 ? texCoords - viewDirTS.xy * (HeightScale) * currentHeight : texCoords - viewDirTS.xy * currentHeight * generalHeightScale;
+//float2 simpleParallaxMapping(float2 texCoords, float3 viewDirTS)
+//{
+//    float currentHeight = g_HeightMap.Sample(g_HeightMap_sampler, float3(texCoords,materialId)).r;
+//    return generalHeightScale < 0.005 ? texCoords - viewDirTS.xy * (HeightScale) * currentHeight : texCoords - viewDirTS.xy * currentHeight * generalHeightScale;
     
-}
+//}
 
-float2 StepParallaxMapping(float2 texCoords, float3 viewDirTS)
-{
-    // Número de capas: entre 8 y 32 según el ángulo
-    const float MinLayers = 8.0f;
-    const float MaxLayers = 32.0f;
+//float2 StepParallaxMapping(float2 texCoords, float3 viewDirTS)
+//{
+//    // Número de capas: entre 8 y 32 según el ángulo
+//    const float MinLayers = 8.0f;
+//    const float MaxLayers = 32.0f;
 
     
-    float numLayers = lerp(MaxLayers, MinLayers, abs(viewDirTS.z));
+//    float numLayers = lerp(MaxLayers, MinLayers, abs(viewDirTS.z));
     
-    // Profundidad de cada capa
-    float layerDepth = 1.0f / numLayers;
-    // Desplazamiento en UV por capa
+//    // Profundidad de cada capa
+//    float layerDepth = 1.0f / numLayers;
+//    // Desplazamiento en UV por capa
     
-    //float2 P = viewDirTS.xy / viewDirTS.z * HeightScale;
+//    //float2 P = viewDirTS.xy / viewDirTS.z * HeightScale;
     
-    float2 P;
+//    float2 P;
     
-    if (generalHeightScale < 0.05)
-    {
-        P = viewDirTS.xy / viewDirTS.z * HeightScale;
-    }
-    else
-    {
-        P = viewDirTS.xy / viewDirTS.z * generalHeightScale;
-    }
+//    if (generalHeightScale < 0.05)
+//    {
+//        P = viewDirTS.xy / viewDirTS.z * HeightScale;
+//    }
+//    else
+//    {
+//        P = viewDirTS.xy / viewDirTS.z * generalHeightScale;
+//    }
     
-    //P = viewDirTS.xy / viewDirTS.z * HeightScale;
+//    //P = viewDirTS.xy / viewDirTS.z * HeightScale;
         
         
-    float2 deltaUV = P / numLayers;
+//    float2 deltaUV = P / numLayers;
     
-    // Coordenadas y profundidad iniciales
-    float2 currUV = texCoords;
-    float currDepth = 0.0f;
-    float mapDepth = g_HeightMap.Sample(g_HeightMap_sampler, float3(currUV,materialId)).r;
+//    // Coordenadas y profundidad iniciales
+//    float2 currUV = texCoords;
+//    float currDepth = 0.0f;
+//    float mapDepth = g_HeightMap.Sample(g_HeightMap_sampler, float3(currUV,materialId)).r;
     
-    // Avanza capa a capa hasta que depth >= mapa
-    [loop]
-    while (currDepth < mapDepth)
-    {
-        currUV -= deltaUV;
-        currDepth += layerDepth;
-        mapDepth = g_HeightMap.Sample(g_HeightMap_sampler, float3(currUV,materialId)).r;
-    }
+//    // Avanza capa a capa hasta que depth >= mapa
+//    [loop]
+//    while (currDepth < mapDepth)
+//    {
+//        currUV -= deltaUV;
+//        currDepth += layerDepth;
+//        mapDepth = g_HeightMap.Sample(g_HeightMap_sampler, float3(currUV,materialId)).r;
+//    }
     
-    return currUV;
-}
+//    return currUV;
+//}
 
 
 
-float2 ParallaxMapping(float2 texCoords, float3 viewDirTS)
-{
+//float2 ParallaxMapping(float2 texCoords, float3 viewDirTS)
+//{
     
-    // Cantidad min y max de capas
-    const float MinLayers = 64.0f;
-    const float MaxLayers = 128.0f;
+//    // Cantidad min y max de capas
+//    const float MinLayers = 64.0f;
+//    const float MaxLayers = 128.0f;
    
-    //// Ajuste de capas
-    float fLayers = lerp(MaxLayers, MinLayers, abs(viewDirTS.z));
+//    //// Ajuste de capas
+//    float fLayers = lerp(MaxLayers, MinLayers, abs(viewDirTS.z));
     
-    uint numLayers = (uint) fLayers + 1; // entero
+//    uint numLayers = (uint) fLayers + 1; // entero
     
-    //float numLayers = lerp(MaxLayers, MinLayers, abs(viewDirTS.z));
-    
-    
-    // Profundidad de cada capa
-    float layerDepth = 1.0f / numLayers;
-    
-    // Vector de desplazamiento en UV por capa
-    //float2 P = viewDirTS.xy / viewDirTS.z * HeightScale;
-    
-    float2 P;
-    
-    float zDivide = max(viewDirTS.z, 1e-4);
-    
-    if (generalHeightScale <= 0.005)
-    {
-        P = viewDirTS.xy / zDivide * HeightScale;
-    }
-    else
-    {
-        P = viewDirTS.xy / zDivide * generalHeightScale;
-    }
-    
-     //P = viewDirTS.xy / viewDirTS.z * HeightScale;
-    
-    float2 deltaUV = P / numLayers;
-    
-    // Coordenadas y profundidad iniciales
-    float2 currUV = texCoords;
-    float currDepth = 0.0f;
-    float mapDepth = 1.0f - g_HeightMap.Sample(g_HeightMap_sampler, float3(currUV, materialId)).r;
-    
-    // Encontrar la capa donde la profunndidad del displacement map sea menor que la de la capa actual
-    [loop]
-    while (currDepth < mapDepth)
-    {
-        currUV -= deltaUV;
-        currDepth += layerDepth;
-        mapDepth = 1.0f - g_HeightMap.Sample(g_HeightMap_sampler, float3(currUV, materialId)).r;
-    }
-    
-    // Encontrar la capa anteio y posterior ala interseccion con el displacement map
-    float2 prevUV = currUV + deltaUV;
-    float after = mapDepth - currDepth;
-    float before = (1.0f - g_HeightMap.Sample(g_HeightMap_sampler, float3(prevUV, materialId)).r)
-                   - (currDepth - layerDepth);
-    
-    // Peso para interpolar entre currUV y prevUV
-    float weight = after / (after - before);
-    
-    // UV finales interpolados
-    return prevUV * weight + currUV * (1.0f - weight);
+//    //float numLayers = lerp(MaxLayers, MinLayers, abs(viewDirTS.z));
     
     
-    //// refinamiento binario (4 pasos = 16× más precisión)
-    //[unroll]
-    //    for (uint i = 0; i < 4; ++i)
-    //    {
-    //        deltaUV *= 0.5;
-    //        float midDepth = currDepth - layerDepth * 0.5;
-    //        float2 midUV = currUV + deltaUV;
+//    // Profundidad de cada capa
+//    float layerDepth = 1.0f / numLayers;
+    
+//    // Vector de desplazamiento en UV por capa
+//    //float2 P = viewDirTS.xy / viewDirTS.z * HeightScale;
+    
+//    float2 P;
+    
+//    float zDivide = max(viewDirTS.z, 1e-4);
+    
+//    if (generalHeightScale <= 0.005)
+//    {
+//        P = viewDirTS.xy / zDivide * HeightScale;
+//    }
+//    else
+//    {
+//        P = viewDirTS.xy / zDivide * generalHeightScale;
+//    }
+    
+//     //P = viewDirTS.xy / viewDirTS.z * HeightScale;
+    
+//    float2 deltaUV = P / numLayers;
+    
+//    // Coordenadas y profundidad iniciales
+//    float2 currUV = texCoords;
+//    float currDepth = 0.0f;
+//    float mapDepth = 1.0f - g_HeightMap.Sample(g_HeightMap_sampler, float3(currUV, materialId)).r;
+    
+//    // Encontrar la capa donde la profunndidad del displacement map sea menor que la de la capa actual
+//    [loop]
+//    while (currDepth < mapDepth)
+//    {
+//        currUV -= deltaUV;
+//        currDepth += layerDepth;
+//        mapDepth = 1.0f - g_HeightMap.Sample(g_HeightMap_sampler, float3(currUV, materialId)).r;
+//    }
+    
+//    // Encontrar la capa anteio y posterior ala interseccion con el displacement map
+//    float2 prevUV = currUV + deltaUV;
+//    float after = mapDepth - currDepth;
+//    float before = (1.0f - g_HeightMap.Sample(g_HeightMap_sampler, float3(prevUV, materialId)).r)
+//                   - (currDepth - layerDepth);
+    
+//    // Peso para interpolar entre currUV y prevUV
+//    float weight = after / (after - before);
+    
+//    // UV finales interpolados
+//    return prevUV * weight + currUV * (1.0f - weight);
+    
+    
+//    //// refinamiento binario (4 pasos = 16× más precisión)
+//    //[unroll]
+//    //    for (uint i = 0; i < 4; ++i)
+//    //    {
+//    //        deltaUV *= 0.5;
+//    //        float midDepth = currDepth - layerDepth * 0.5;
+//    //        float2 midUV = currUV + deltaUV;
 
-    //        float midMap = 1.0 - g_HeightMap.Sample(g_HeightMap_sampler, midUV).r;
+//    //        float midMap = 1.0 - g_HeightMap.Sample(g_HeightMap_sampler, midUV).r;
 
-    //        bool below = midDepth < midMap;
-    //        currUV = below ? midUV : currUV;
-    //        currDepth = below ? midDepth : currDepth;
-    //        layerDepth = layerDepth * 0.5;
-    //}
-    //return currUV;
+//    //        bool below = midDepth < midMap;
+//    //        currUV = below ? midUV : currUV;
+//    //        currDepth = below ? midDepth : currDepth;
+//    //        layerDepth = layerDepth * 0.5;
+//    //}
+//    //return currUV;
     
-}
+//}
 
 
 float4 main(PSInput IN) : SV_Target
@@ -224,30 +224,30 @@ float4 main(PSInput IN) : SV_Target
     //float2 uvP = ParallaxMap(IN.uv, vDir);
     //float2 uvP = ParallaxOcclusionMap(IN.uv, vDir);
     //float2 uvP = ParallaxMapping(IN.uv, vDir);
-    float2 uvP;
-    if (parallaxMode == 0)
-    {
-        uvP = simpleParallaxMapping(IN.uv, vDir);
-    }
-    else if (parallaxMode == 1)
-    {
-        uvP = StepParallaxMapping(IN.uv, vDir);
-    }
-    else
-    {
-        //uvP = ParallaxOcclusionMap(IN.uv, vDir);
-        uvP = ParallaxMapping(IN.uv, vDir);
-    }
-    //uvP = ParallaxOcclusionMap(IN.uv, vDir);
+    float2 uvP = IN.uv;
+    //if (parallaxMode == 0)
+    //{
+    //    uvP = simpleParallaxMapping(IN.uv, vDir);
+    //}
+    //else if (parallaxMode == 1)
+    //{
+    //    uvP = StepParallaxMapping(IN.uv, vDir);
+    //}
+    //else
+    //{
+    //    //uvP = ParallaxOcclusionMap(IN.uv, vDir);
+    //    uvP = ParallaxMapping(IN.uv, vDir);
+    //}
+    ////uvP = ParallaxOcclusionMap(IN.uv, vDir);
 
         
-        //float2 uvP = StepParallaxMapping(IN.uv, vDir);
-    if (uvP.x > 1.0 || uvP.y > 1.0 || uvP.x < 0.0 || uvP.y < 0.0)
-    {
-        discard;
+    //    //float2 uvP = StepParallaxMapping(IN.uv, vDir);
+    //if (uvP.x > 1.0 || uvP.y > 1.0 || uvP.x < 0.0 || uvP.y < 0.0)
+    //{
+    //    discard;
        
 
-    }
+    //}
     // Calculo de la luz puntual -----------------------------
     
     //Ambiental
